@@ -1,120 +1,114 @@
 import random
+from itertools import combinations
 
-def calculate_parity(bits):
-    """Функция вычисления 3-битной функции от предыдущих 5 битов."""
-    parity = 0
-    for bit in bits:
-        parity ^= bit  # XOR всех битов для чётности
-    
-    return parity & 0x7  # Оставляем только 3 младших бита
+# Функция для вычисления расстояния Хэмминга между двумя числами
+def hamming_distance(a, b):
+    return bin(a ^ b).count('1')
 
-def encode_12bit_value(value):
-    """Функция кодирования 12-битного значения в три 8-битных байта."""
-    if value > 0xFFF:
-        raise ValueError("Значение должно быть 12-битным (от 0 до 4095)")
-    
-    # Разбиваем 12-битное значение на три части по 4 бита
-    parts = [(value >> 8) & 0xF, (value >> 4) & 0xF, value & 0xF]
-    
-    encoded_bytes = []
-    
-    for part in parts:
-        # Формируем байт:
-        # 1-бит проверки, 4 бита данных, 3 бита функции (чётности)
-        byte = (1 << 7) | (part << 3)  # Первые 5 битов (1 + данные)
-        
-        # Вычисляем последние 3 бита функции
-        first_5_bits = [(byte >> i) & 1 for i in range(7, 2, -1)]  # Разбиваем на отдельные биты
-        parity = calculate_parity(first_5_bits)
-        
-        # Добавляем три бита функции (чётности)
-        byte |= parity
-        
-        encoded_bytes.append(byte)
-    
-    return encoded_bytes
+# Генерация кодовой книги с минимальным расстоянием Хэмминга 5
+def generate_codebook(n_codewords=16, codeword_length=16, min_distance=5):
+    codebook = []
+    for codeword in range(0, 1 << codeword_length):
+        # Проверяем расстояние Хэмминга до всех уже добавленных кодовых слов
+        if all(hamming_distance(codeword, existing) >= min_distance for existing in codebook):
+            codebook.append(codeword)
+            if len(codebook) == n_codewords:
+                break
+    if len(codebook) < n_codewords:
+        raise ValueError(f"Не удалось сгенерировать кодовую книгу из {n_codewords} кодовых слов с длиной {codeword_length} бит и минимальным расстоянием {min_distance}.")
+    return codebook
 
-def invert_random_bits(byte, max_invert=2):
-    """Случайно инвертирует до 2 битов в байте."""
-    # Выбираем количество бит для инвертирования (от 1 до max_invert)
-    num_invert = random.randint(0, max_invert)
-    
-    # Получаем список индексов битов, которые будем инвертировать
-    bits_to_invert = random.sample(range(8), num_invert)
-    
-    for bit in bits_to_invert:
-        byte ^= (1 << bit)  # Инвертируем бит
-    
-    return byte
-
-def decode_12bit_value(encoded_bytes):
-    """Функция декодирования трёх 8-битных байтов в одно 12-битное значение."""
-    if len(encoded_bytes) != 3:
-        raise ValueError("Для декодирования требуется три байта")
-    
-    decoded_value = 0
-    
-    for i, byte in enumerate(encoded_bytes):
-        # Проверяем первый бит (должен быть 1)
-        if (byte >> 7) != 1:
-            raise ValueError(f"Ошибка в структуре байта {i+1}: первый бит не равен 1")
-        
-        # Извлекаем полезные 4 бита данных
-        data = (byte >> 3) & 0xF
-        
-        # Проверяем три последних бита функции
-        first_5_bits = [(byte >> i) & 1 for i in range(7, 2, -1)]
-        parity = calculate_parity(first_5_bits)
-        
-        if (byte & 0x7) != parity:
-            print(f"Ожидаемая чётность: {parity:03b}, полученная: {byte & 0x7:03b}")
-            raise ValueError("Ошибка контрольной функции (чётности)")
-        
-        # Восстанавливаем 12-битное значение
-        decoded_value |= (data << (8 - 4 * i))
-    
-    return decoded_value
-
-def encode_data(data_list):
-    """Функция для кодирования списка 12-битных значений в массив байтов."""
-    encoded_bytes = []
-    for value in data_list:
-        encoded_bytes.extend(encode_12bit_value(value))
-    return encoded_bytes
-
-def introduce_errors(encoded_bytes, max_invert=2):
-    """Функция для случайного инвертирования до 2 битов в каждом байте."""
-    corrupted_bytes = []
-    for byte in encoded_bytes:
-        corrupted_byte = invert_random_bits(byte, max_invert)
-        corrupted_bytes.append(corrupted_byte)
-    return corrupted_bytes
-
-def decode_data(encoded_bytes):
-    """Функция для декодирования массива байтов в список 12-битных значений."""
-    decoded_data = []
-    for i in range(0, len(encoded_bytes), 3):
-        decoded_value = decode_12bit_value(encoded_bytes[i:i + 3])
-        decoded_data.append(decoded_value)
-    return decoded_data
-
-# Пример использования:
-data_list = [0x0F3, 0x57B, 0xA4D]  # Список 12-битных значений
-
-# Кодирование данных
-encoded_data = encode_data(data_list)
-encoded_hex = " ".join([f"{byte:08b}" for byte in encoded_data])
-print(f"Закодированные данные: {encoded_hex}")
-
-# Внесение случайных ошибок
-corrupted_data = introduce_errors(encoded_data)
-corrupted_hex = " ".join([f"{byte:08b}" for byte in corrupted_data])
-print(f"Испорченные данные: {corrupted_hex}")
-
-# Декодирование данных
+# Создаём кодовую книгу
 try:
-    decoded_data = decode_data(corrupted_data)
-    decoded_hex = " ".join([f"{value:03X}" for value in decoded_data])
-    print(f"Декодированные данные: {decoded_hex}")
+    CODEBOOK_LIST = generate_codebook()
 except ValueError as e:
-    print(f"Ошибка: {e}")
+    print(e)
+    # В случае необходимости можно увеличить длину кодового слова или уменьшить минимальное расстояние
+    exit(1)
+
+# Создаём словарь для быстрого доступа: ниббл -> кодовое слово
+CODEBOOK = {nibble: codeword for nibble, codeword in enumerate(CODEBOOK_LIST)}
+
+# Проверка минимального расстояния Хэмминга
+def verify_codebook(codebook, min_distance=5):
+    codewords = list(codebook.values())
+    for (i, cw1), (j, cw2) in combinations(enumerate(codewords), 2):
+        distance = hamming_distance(cw1, cw2)
+        if distance < min_distance:
+            print(f"Расстояние Хэмминга между кодами {i} и {j} равно {distance}. Требуется минимум {min_distance}.")
+            return False
+    print(f"Кодовая книга прошла проверку на минимальное расстояние Хэмминга {min_distance}.")
+    return True
+
+# Верифицируем кодовую книгу
+verify_codebook(CODEBOOK)
+
+# Функция кодирования
+def encode(nibble):
+    return CODEBOOK[nibble]
+
+# Функция введения ошибок (до 2 битов)
+def introduce_errors(codeword, max_errors=2):
+    num_errors = random.randint(0, max_errors)
+    error_positions = random.sample(range(16), num_errors)
+    for pos in error_positions:
+        codeword ^= (1 << pos)
+    return codeword
+
+# Функция декодирования
+def decode(received, codebook):
+    min_distance = float('inf')
+    decoded_nibble = None
+    for nibble, codeword in codebook.items():
+        distance = hamming_distance(received, codeword)
+        if distance < min_distance:
+            min_distance = distance
+            decoded_nibble = nibble
+            if min_distance == 0:
+                break  # Найдено точное совпадение
+    return decoded_nibble
+
+# Пример работы с числами AF3, AD0, 13F
+input_hex = ['FFF', 'AD0', '13F']
+
+# Разбиваем 12-битные числа на три 4-битных ниббла
+def split_into_nibbles(hex_number):
+    # Преобразуем в целое число
+    num = int(hex_number, 16)
+    nibbles = []
+    for shift in range(8, -4, -4):
+        nibble = (num >> shift) & 0xF
+        nibbles.append(nibble)
+    return nibbles
+
+# Обрабатываем каждое число
+for hex_num in input_hex:
+    print(f"\nИсходное число: {hex_num}")
+    nibbles = split_into_nibbles(hex_num)
+    print(f"Нибблы: {[hex(n) for n in nibbles]}")
+    
+    encoded = [encode(nibble) for nibble in nibbles]
+    print("Закодированные 16-битные числа:")
+    for e in encoded:
+        print(f"{e:016b}")
+    
+    # Вводим ошибки
+    corrupted = [introduce_errors(e) for e in encoded]
+    print("Поврежденные 16-битные числа:")
+    for c in corrupted:
+        print(f"{c:016b}")
+    
+    # Декодируем
+    decoded = [decode(c, CODEBOOK) for c in corrupted]
+    print(f"Декодированные нибблы: {[hex(d) for d in decoded]}")
+    
+    # Собираем обратно 12-битное число
+    decoded_num = 0
+    for nibble in decoded:
+        decoded_num = (decoded_num << 4) | nibble
+    print(f"Восстановленное число: {hex(decoded_num)[2:].upper()}")
+
+# Отображение Кодовой Книги
+print("\nКодовая книга (Ниббл -> Кодовое слово):")
+for nibble in range(16):
+    print(f"0x{nibble:X} -> {CODEBOOK[nibble]:016b}")
