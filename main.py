@@ -97,7 +97,7 @@ for nibble in input_nibbles:
 
     # Вводим ошибки
     corrupted = introduce_errors(encoded)
-    print(f"Поврежденное 32-битное слово: {format_32bit_word(corrupted)}")
+    print(f"Поврежденное 32-битное слово:   {format_32bit_word(corrupted)}")
 
     # Декодируем поврежденное слово
     decoded = decode(corrupted, CODEBOOK)
