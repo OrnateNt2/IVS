@@ -85,13 +85,18 @@ def format_32bit_word(word):
     return f'{(word >> 24) & 0xFF:08b} {(word >> 16) & 0xFF:08b} {(word >> 8) & 0xFF:08b} {word & 0xFF:08b}'
 
 # Пример работы с двоичными числами (в формате строк)
-input_nibbles_binary = ['1010', '1111', '0', '101','1100']  # Входные числа в двоичном формате
+input_nibbles_binary = ['1010', '1111', '0011', '11', '0', '101', '1011']  # Добавляем числа с длиной менее 4 бит
 
-# Конвертируем двоичные строки в целые значения
-input_nibbles = [int(nibble, 2) for nibble in input_nibbles_binary]
+# Конвертируем двоичные строки в целые значения и обрабатываем только те, что длиной 4 бита
+input_nibbles = [int(nibble, 2) for nibble in input_nibbles_binary if len(nibble) == 4]
 
-# Кодируем и декодируем каждое число
-for nibble, binary_input in zip(input_nibbles, input_nibbles_binary):
+# Кодируем и декодируем только 4-битные числа
+for binary_input in input_nibbles_binary:
+    if len(binary_input) < 4:
+        print(f"\nПропускаем число {binary_input}, так как оно меньше 4 бит.")
+        continue
+
+    nibble = int(binary_input, 2)  # Конвертируем двоичную строку в число
     print(f"\nИсходное 4-битное число: {binary_input}")
     
     # Кодируем в 32-битное слово
