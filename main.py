@@ -80,6 +80,10 @@ def decode(received, codebook):
                 break  # Нашли точное совпадение
     return decoded_nibble
 
+# Функция для форматирования 32-битного слова с разделением по 8 бит
+def format_32bit_word(word):
+    return f'{(word >> 24) & 0xFF:08b} {(word >> 16) & 0xFF:08b} {(word >> 8) & 0xFF:08b} {word & 0xFF:08b}'
+
 # Пример работы с числами 0xA, 0xF, 0x3
 input_nibbles = [0xA, 0xF, 0x3]
 
@@ -89,11 +93,11 @@ for nibble in input_nibbles:
     
     # Кодируем в 32-битное слово
     encoded = encode(nibble)
-    print(f"Закодированное 32-битное слово: {encoded:032b}")
+    print(f"Закодированное 32-битное слово: {format_32bit_word(encoded)}")
 
     # Вводим ошибки
     corrupted = introduce_errors(encoded)
-    print(f"Поврежденное 32-битное слово: {corrupted:032b}")
+    print(f"Поврежденное 32-битное слово: {format_32bit_word(corrupted)}")
 
     # Декодируем поврежденное слово
     decoded = decode(corrupted, CODEBOOK)
