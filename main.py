@@ -1,3 +1,5 @@
+import random
+
 def calculate_parity(bits):
     """Функция вычисления 3-битной функции от предыдущих 5 битов."""
     parity = 0
@@ -23,7 +25,6 @@ def encode_12bit_value(value):
         
         # Вычисляем последние 3 бита функции
         first_5_bits = [(byte >> i) & 1 for i in range(7, 2, -1)]  # Разбиваем на отдельные биты
-        print(f"Первые 5 бит для чётности: {first_5_bits}")  # Отладочный вывод
         parity = calculate_parity(first_5_bits)
         
         # Добавляем три бита функции (чётности)
@@ -32,6 +33,19 @@ def encode_12bit_value(value):
         encoded_bytes.append(byte)
     
     return encoded_bytes
+
+def invert_random_bits(byte, max_invert=2):
+    """Случайно инвертирует до 2 битов в байте."""
+    # Выбираем количество бит для инвертирования (от 1 до max_invert)
+    num_invert = random.randint(0, max_invert)
+    
+    # Получаем список индексов битов, которые будем инвертировать
+    bits_to_invert = random.sample(range(8), num_invert)
+    
+    for bit in bits_to_invert:
+        byte ^= (1 << bit)  # Инвертируем бит
+    
+    return byte
 
 def decode_12bit_value(encoded_bytes):
     """Функция декодирования трёх 8-битных байтов в одно 12-битное значение."""
@@ -50,7 +64,6 @@ def decode_12bit_value(encoded_bytes):
         
         # Проверяем три последних бита функции
         first_5_bits = [(byte >> i) & 1 for i in range(7, 2, -1)]
-        print(f"Первые 5 бит для чётности (декод): {first_5_bits}")  # Отладочный вывод
         parity = calculate_parity(first_5_bits)
         
         if (byte & 0x7) != parity:
@@ -69,6 +82,14 @@ def encode_data(data_list):
         encoded_bytes.extend(encode_12bit_value(value))
     return encoded_bytes
 
+def introduce_errors(encoded_bytes, max_invert=2):
+    """Функция для случайного инвертирования до 2 битов в каждом байте."""
+    corrupted_bytes = []
+    for byte in encoded_bytes:
+        corrupted_byte = invert_random_bits(byte, max_invert)
+        corrupted_bytes.append(corrupted_byte)
+    return corrupted_bytes
+
 def decode_data(encoded_bytes):
     """Функция для декодирования массива байтов в список 12-битных значений."""
     decoded_data = []
@@ -85,9 +106,14 @@ encoded_data = encode_data(data_list)
 encoded_hex = " ".join([f"{byte:08b}" for byte in encoded_data])
 print(f"Закодированные данные: {encoded_hex}")
 
+# Внесение случайных ошибок
+corrupted_data = introduce_errors(encoded_data)
+corrupted_hex = " ".join([f"{byte:08b}" for byte in corrupted_data])
+print(f"Испорченные данные: {corrupted_hex}")
+
 # Декодирование данных
 try:
-    decoded_data = decode_data(encoded_data)
+    decoded_data = decode_data(corrupted_data)
     decoded_hex = " ".join([f"{value:03X}" for value in decoded_data])
     print(f"Декодированные данные: {decoded_hex}")
 except ValueError as e:
