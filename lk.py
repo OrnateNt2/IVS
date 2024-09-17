@@ -45,13 +45,11 @@ def encode(nibble):
     return CODEBOOK[nibble]
 
 # Функция инверсии до 2 бит в каждом байте
-def invert_bits(byte, sum_corryp):
-    num_bits = random.randint(0,2)
-    sum_corryp += num_bits
+def invert_bits(byte, num_bits=2):
     positions = random.sample(range(8), num_bits)
     for pos in positions:
         byte ^= (1 << pos)
-    return byte, sum_corryp
+    return byte
 
 # Функция для введения ошибок: инвертируем по 2 бита в каждом из четырёх байтов
 def introduce_errors(codeword):
@@ -60,13 +58,11 @@ def introduce_errors(codeword):
     byte3 = (codeword >> 8) & 0xFF
     byte4 = codeword & 0xFF
 
-    sum_corryp = 0
-    byte1, sum_corryp = invert_bits(byte1, sum_corryp)
-    byte2, sum_corryp = invert_bits(byte2, sum_corryp)
-    byte3, sum_corryp = invert_bits(byte3, sum_corryp)
-    byte4, sum_corryp = invert_bits(byte4, sum_corryp)
+    byte1 = invert_bits(byte1, 2)
+    byte2 = invert_bits(byte2, 2)
+    byte3 = invert_bits(byte3, 2)
+    byte4 = invert_bits(byte4, 2)
 
-    print("\nСумма инвертированных битов", sum_corryp)
     # Собираем обратно поврежденное слово
     corrupted = (byte1 << 24) | (byte2 << 16) | (byte3 << 8) | byte4
     return corrupted
@@ -89,8 +85,7 @@ def format_32bit_word(word):
     return f'{(word >> 24) & 0xFF:08b} {(word >> 16) & 0xFF:08b} {(word >> 8) & 0xFF:08b} {word & 0xFF:08b}'
 
 # Пример работы с двоичными числами (в формате строк)
-input_nibbles_binary = ['1010', '1111', '0011', '11', '0', '101', '1011',"0000","0000","0000"]  # Добавляем числа с длиной менее 4 бит
-
+input_nibbles_binary = ['1010', '1111', '0011', '11', '0', '101', '1011']  # Добавляем числа с длиной менее 4 бит
 
 # Конвертируем двоичные строки в целые значения и обрабатываем только те, что длиной 4 бита
 input_nibbles = [int(nibble, 2) for nibble in input_nibbles_binary if len(nibble) == 4]
@@ -100,17 +95,16 @@ for binary_input in input_nibbles_binary:
     if len(binary_input) < 4:
         print(f"\nПропускаем число {binary_input}, так как оно меньше 4 бит.")
         continue
-
-
-    nibble = int(binary_input, 2)  # Конвертируем двоичную строку в число
-    hex_inp = hex(int(binary_input, 2))[2:].upper()
-    print(f"\nИсходное число в 16-ричной: {hex_inp}")
-    print(f"Исходное 4-битное число: {binary_input}")
     
+    nibble = int(binary_input, 2)  # Конвертируем двоичную строку в число
+
+    hex_value_encode = hex(int(binary_input, 2))[2:].upper()
+    print(f"\nИсходное 4-битное число: {hex_value_encode}")
     
     # Кодируем в 32-битное слово
     encoded = encode(nibble)
     print(f"Закодированное 32-битное слово: {format_32bit_word(encoded)}")
+
 
     # Вводим ошибки
     corrupted = introduce_errors(encoded)
@@ -118,5 +112,5 @@ for binary_input in input_nibbles_binary:
 
     # Декодируем поврежденное слово
     decoded = decode(corrupted, CODEBOOK)
-    print(f"Декодированное число в 16-ричной: {hex(decoded)[2:].upper()}")
-    print(f"Декодированное 4-битное число: {bin(decoded)[2:].zfill(4)}\n")
+    hex_value_decode = hex(decoded)[2:].upper()
+    print(f"Декодированное 4-битное число: {hex_value_decode}")
