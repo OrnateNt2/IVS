@@ -98,7 +98,7 @@ for nib_str in inputs:
         print(f"Not found in codebook!")
         continue
 
-    print(f"Encoded: {bin(encoded)[2:]}")
+    print(f"Encoded:   {bin(encoded)[2:]}")
 
     corrupted = corrupt(encoded)
     print(f"Corrupted: {bin(corrupted)[2:]}")
