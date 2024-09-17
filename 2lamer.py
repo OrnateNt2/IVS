@@ -52,12 +52,25 @@ def flip(byte, bits=2):
         byte ^= (1 << bit)
     return byte
 
-# Corrupt the codeword
+# Corrupt the codeword without using shifts
 def corrupt(word):
-    bytes_list = [(word >> shift) & 0xFF for shift in (24, 16, 8, 0)]
-    for i in range(4):
-        bytes_list[i] = flip(bytes_list[i], 2)
-    return (bytes_list[0] << 24) | (bytes_list[1] << 16) | (bytes_list[2] << 8) | bytes_list[3]
+    # Split word into bytes manually (without shifts)
+    byte1 = word // (2 ** 24)
+    word %= (2 ** 24)
+    byte2 = word // (2 ** 16)
+    word %= (2 ** 16)
+    byte3 = word // (2 ** 8)
+    byte4 = word % (2 ** 8)
+
+    # Flip bits in each byte
+    byte1 = flip(byte1, 2)
+    byte2 = flip(byte2, 2)
+    byte3 = flip(byte3, 2)
+    byte4 = flip(byte4, 2)
+
+    # Combine bytes back into the corrupted word
+    corrupted_word = (byte1 * (2 ** 24)) + (byte2 * (2 ** 16)) + (byte3 * (2 ** 8)) + byte4
+    return corrupted_word
 
 # Decode a word
 def dec(word, book):
@@ -70,7 +83,7 @@ def dec(word, book):
             best = nib
     return best
 
-# Example
+# Example of usage
 inputs = ['1010', '1111', '0011', '11', '0', '101', '1011']
 
 for nib_str in inputs:
@@ -85,10 +98,10 @@ for nib_str in inputs:
         print(f"Not found in codebook!")
         continue
 
-    print(f"Encoded: {bin(encoded)}")
+    print(f"Encoded: {bin(encoded)[2:]}")
 
     corrupted = corrupt(encoded)
-    print(f"Corrupted: {bin(corrupted)}")
+    print(f"Corrupted: {bin(corrupted)[2:]}")
 
     decoded = dec(corrupted, CODES)
     if decoded is not None:
